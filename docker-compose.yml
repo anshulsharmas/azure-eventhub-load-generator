@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  eventhub-simulator:
+    build: .
+    environment:
+      - EVENT_HUB_CONNECTION_STRING=${EVENT_HUB_CONNECTION_STRING}
+      - EVENT_HUB_NAME=${EVENT_HUB_NAME}
+      - PYTHONUNBUFFERED=1
+    command: ["python", "eventhub_simulator.py", "--rate", "10000", "--duration", "60"]
+    restart: unless-stopped
+    
+  # Multiple simulators for higher throughput
+  eventhub-simulator-2:
+    build: .
+    environment:
+      - EVENT_HUB_CONNECTION_STRING=${EVENT_HUB_CONNECTION_STRING}
+      - EVENT_HUB_NAME=${EVENT_HUB_NAME}
+      - PYTHONUNBUFFERED=1
+    command: ["python", "eventhub_simulator.py", "--rate", "10000", "--duration", "60"]
+    restart: unless-stopped
+    
+  eventhub-simulator-3:
+    build: .
+    environment:
+      - EVENT_HUB_CONNECTION_STRING=${EVENT_HUB_CONNECTION_STRING}
+      - EVENT_HUB_NAME=${EVENT_HUB_NAME} 
+      - PYTHONUNBUFFERED=1
+    command: ["python", "eventhub_simulator.py", "--rate", "10000", "--duration", "60"]
+    restart: unless-stopped

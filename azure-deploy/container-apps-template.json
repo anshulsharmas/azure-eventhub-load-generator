@@ -1,0 +1,149 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "containerAppName": {
+            "type": "string",
+            "defaultValue": "eventhub-simulator",
+            "metadata": {
+                "description": "Name of the container app"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources"
+            }
+        },
+        "eventHubConnectionString": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Event Hub connection string"
+            }
+        },
+        "eventHubName": {
+            "type": "string",
+            "metadata": {
+                "description": "Event Hub name"
+            }
+        },
+        "containerImage": {
+            "type": "string",
+            "defaultValue": "eventhub-simulator:latest",
+            "metadata": {
+                "description": "Container image"
+            }
+        },
+        "messageRate": {
+            "type": "int",
+            "defaultValue": 100000,
+            "metadata": {
+                "description": "Messages per second"
+            }
+        },
+        "replicaCount": {
+            "type": "int",
+            "defaultValue": 3,
+            "minValue": 1,
+            "maxValue": 10,
+            "metadata": {
+                "description": "Number of replicas to run"
+            }
+        }
+    },
+    "variables": {
+        "containerAppEnvironmentName": "[concat(parameters('containerAppName'), '-env')]",
+        "logAnalyticsWorkspaceName": "[concat(parameters('containerAppName'), '-logs')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "apiVersion": "2021-06-01",
+            "name": "[variables('logAnalyticsWorkspaceName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "sku": {
+                    "name": "PerGB2018"
+                },
+                "retentionInDays": 7
+            }
+        },
+        {
+            "type": "Microsoft.App/managedEnvironments",
+            "apiVersion": "2022-03-01",
+            "name": "[variables('containerAppEnvironmentName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]"
+            ],
+            "properties": {
+                "appLogsConfiguration": {
+                    "destination": "log-analytics",
+                    "logAnalyticsConfiguration": {
+                        "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))).customerId]",
+                        "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName')), '2021-06-01').primarySharedKey]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.App/containerApps",
+            "apiVersion": "2022-03-01",
+            "name": "[parameters('containerAppName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppEnvironmentName'))]"
+            ],
+            "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppEnvironmentName'))]",
+                "configuration": {
+                    "secrets": [
+                        {
+                            "name": "eventhub-connection-string",
+                            "value": "[parameters('eventHubConnectionString')]"
+                        }
+                    ],
+                    "registries": [],
+                    "activeRevisionsMode": "Single"
+                },
+                "template": {
+                    "containers": [
+                        {
+                            "name": "eventhub-simulator",
+                            "image": "[parameters('containerImage')]",
+                            "args": [
+                                "--rate",
+                                "[string(parameters('messageRate'))]"
+                            ],
+                            "env": [
+                                {
+                                    "name": "EVENT_HUB_CONNECTION_STRING",
+                                    "secretRef": "eventhub-connection-string"
+                                },
+                                {
+                                    "name": "EVENT_HUB_NAME",
+                                    "value": "[parameters('eventHubName')]"
+                                }
+                            ],
+                            "resources": {
+                                "cpu": 2,
+                                "memory": "4Gi"
+                            }
+                        }
+                    ],
+                    "scale": {
+                        "minReplicas": "[parameters('replicaCount')]",
+                        "maxReplicas": "[parameters('replicaCount')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "containerAppFQDN": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.App/containerApps', parameters('containerAppName'))).configuration.ingress.fqdn]"
+        }
+    }
+}

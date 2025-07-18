@@ -1,0 +1,24 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "containerGroupName": {
+            "value": "eventhub-simulator"
+        },
+        "eventHubConnectionString": {
+            "value": "YOUR_EVENT_HUB_CONNECTION_STRING"
+        },
+        "eventHubName": {
+            "value": "YOUR_EVENT_HUB_NAME"
+        },
+        "messageRate": {
+            "value": 50000
+        },
+        "messageDuration": {
+            "value": 600
+        },
+        "containerImage": {
+            "value": "YOUR_CONTAINER_REGISTRY/eventhub-simulator:latest"
+        }
+    }
+}

@@ -1,0 +1,40 @@
+{
+  "simulator": {
+    "default_rate": 100000,
+    "default_message_size": 500,
+    "max_workers": 50,
+    "batch_size_per_1k_rate": 100,
+    "min_batch_size": 1,
+    "max_batch_size": 1000
+  },
+  "message_generation": {
+    "target_field_count": 100,
+    "field_count_variance": 5,
+    "size_tolerance": 50,
+    "string_length_range": [5, 15],
+    "number_range": [1, 100000],
+    "float_precision": 2
+  },
+  "stock_symbols": {
+    "default_symbols": [
+      "AAPL", "GOOGL", "MSFT", "TSLA", "AMZN", "META", "NVDA", "NFLX",
+      "CRM", "ORCL", "IBM", "INTC", "AMD", "ADBE", "PYPL", "UBER"
+    ]
+  },
+  "logging": {
+    "level": "WARNING",
+    "stats_interval": 1.0,
+    "progress_format": "[{elapsed:.0f}s] Current: {current_rate:,} msg/sec | Average: {avg_rate:,.0f} msg/sec | Total: {total:,} messages"
+  },
+  "azure": {
+    "max_batch_size": 1000,
+    "connection_timeout": 30,
+    "retry_attempts": 3,
+    "retry_delay": 1.0
+  },
+  "eventhub": {
+    "connection_string": "Endpoint=sb://<your-event-hub-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-policy-name>;SharedAccessKey=<your-access-key>",
+    "eventhub_name": "<your-event-hub-name>",
+    "consumer_group": "$Default"
+  }
+}

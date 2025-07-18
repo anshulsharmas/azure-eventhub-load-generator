@@ -1,0 +1,141 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "containerGroupName": {
+            "type": "string",
+            "defaultValue": "eventhub-simulator",
+            "metadata": {
+                "description": "Name for the container group"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue":  "eastus", //[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources"
+            }
+        },
+        "eventHubConnectionString": {
+            "type": "securestring",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Event Hub connection string (optional - will use config.json if not provided)"
+            }
+        },
+        "eventHubName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Event Hub name (optional - will use config.json if not provided)"
+            }
+        },
+        "messageRate": {
+            "type": "int",
+            "defaultValue": 1000000,
+            "metadata": {
+                "description": "Messages per second"
+            }
+        },
+        "messageDuration": {
+            "type": "int",
+            "defaultValue": 0,
+            "metadata": {
+                "description": "Duration in seconds (0 = unlimited)"
+            }
+        },
+        "containerImage": {
+            "type": "string",
+            "defaultValue": "eventhub-simulator:latest",
+            "metadata": {
+                "description": "Container image name"
+            }
+        },
+        "acrLoginServer": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure Container Registry login server"
+            }
+        },
+        "acrUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure Container Registry username"
+            }
+        },
+        "acrPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Azure Container Registry password"
+            }
+        }
+    },
+    "variables": {
+        "containerName": "eventhub-simulator"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.ContainerInstance/containerGroups",
+            "apiVersion": "2021-03-01",
+            "name": "[parameters('containerGroupName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "containers": [
+                    {
+                        "name": "[variables('containerName')]",
+                        "properties": {
+                            "image": "[parameters('containerImage')]",
+                            "command": [
+                                "python",
+                                "eventhub_simulator.py",
+                                "--rate",
+                                "[string(parameters('messageRate'))]",
+                                "--duration", 
+                                "[string(parameters('messageDuration'))]"
+                            ],
+                            "resources": {
+                                "requests": {
+                                    "cpu": 2,
+                                    "memoryInGB": 4
+                                }
+                            },
+                            "environmentVariables": [
+                                {
+                                    "name": "EVENT_HUB_CONNECTION_STRING",
+                                    "secureValue": "[parameters('eventHubConnectionString')]"
+                                },
+                                {
+                                    "name": "EVENT_HUB_NAME",
+                                    "value": "[parameters('eventHubName')]"
+                                },
+                                {
+                                    "name": "PYTHONUNBUFFERED",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "osType": "Linux",
+                "restartPolicy": "OnFailure",
+                "imageRegistryCredentials": [
+                    {
+                        "server": "[parameters('acrLoginServer')]",
+                        "username": "[parameters('acrUsername')]",
+                        "password": "[parameters('acrPassword')]"
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "containerGroupName": {
+            "type": "string",
+            "value": "[parameters('containerGroupName')]"
+        },
+        "provisioningState": {
+            "type": "string", 
+            "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups/', parameters('containerGroupName'))).provisioningState]"
+        }
+    }
+}

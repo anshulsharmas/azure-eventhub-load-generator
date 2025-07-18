@@ -1,0 +1,7 @@
+azure-eventhub>=5.11.0
+azure-eventhub-checkpointstoreblob>=1.1.4
+asyncio-throttle>=1.0.2
+
+# Optional: Azure Key Vault integration
+azure-keyvault-secrets>=4.7.0
+azure-identity>=1.15.0
