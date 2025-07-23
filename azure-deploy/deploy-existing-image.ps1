@@ -3,9 +3,9 @@
 
 param(
     [string]$ResourceGroupName = "high-throughput-streaming-poc",
-    [string]$Location = "eastus", 
+    [string]$Location = "eastus2", 
     [string]$AcrName = "eventhubsimacr",
-    [string]$ContainerImage  = "eventhub-simulator-2:latest"
+    [string]$ContainerImage  = "eventhub-simulator-dedicated-2:latest"
 )
 
 Write-Host "🚀 Azure Event Hub Simulator Deployment" -ForegroundColor Green
@@ -35,7 +35,7 @@ Write-Host "🚀 Deploying containers..." -ForegroundColor Yellow
 $eventHubConnectionString = ""
 $eventHubName = ""
 
-51..51 | ForEach-Object {
+1451..1500 | ForEach-Object {
     $currentContainerName = "eventhub-simulator-$_"
     Write-Host "Deploying container: $currentContainerName" -ForegroundColor Cyan
     
@@ -44,6 +44,7 @@ $eventHubName = ""
         --template-file "$PSScriptRoot/aci-template.json" `
         --parameters `
             containerGroupName=$currentContainerName `
+            location=$Location `
             eventHubConnectionString="$eventHubConnectionString" `
             eventHubName="$eventHubName" `
             messageRate=1000000 `

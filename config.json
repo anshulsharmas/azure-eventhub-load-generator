@@ -34,7 +34,7 @@
   },
   "eventhub": {
     "connection_string": "Endpoint=sb://<your-event-hub-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-policy-name>;SharedAccessKey=<your-access-key>",
-    "eventhub_name": "<your-event-hub-name>",
-    "consumer_group": "$Default"
+    "eventhub_name": "<EVENT_HUB_NAME>",
+    "consumer_group": "<CONSUMER_GROUP>"
   }
 }

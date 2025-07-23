@@ -25,8 +25,8 @@ Edit `config.json` with your Event Hub details:
 ```json
 {
   "eventhub": {
-    "connection_string": "Endpoint=sb://your-namespace.servicebus.windows.net/;SharedAccessKeyName=your-policy;SharedAccessKey=your-key;EntityPath=your-eventhub",
-    "eventhub_name": "your-eventhub-name"
+    "connection_string": "Endpoint=sb://your-namespace.servicebus.windows.net/;SharedAccessKeyName=your-key-name;SharedAccessKey=your-key",
+    "eventhub_name": "your-event-hub-name"
   }
 }
 ```
@@ -145,89 +145,183 @@ export EVENT_HUB_NAME="your-eventhub-name"
 python eventhub_simulator.py
 ```
 
-## Azure Container Instance Deployment
+## Deployment Options
 
-The application includes automated deployment scripts for running the load generator on Azure Container Instances (ACI), which is ideal for high-throughput testing without managing infrastructure.
+The application supports multiple deployment methods for different use cases:
 
-### Quick Deploy
+### 1. Local Development
+Run directly on your machine:
+```bash
+python eventhub_simulator.py --rate 10000 --duration 300
+```
 
-Use the PowerShell deployment script for a complete automated deployment:
+### 2. Docker Container
+Build and run using Docker:
+```bash
+# Build the container
+docker build -t eventhub-simulator .
 
+# Run with environment variables
+docker run -e EVENT_HUB_CONNECTION_STRING="your-connection-string" \
+           -e EVENT_HUB_NAME="your-eventhub-name" \
+           eventhub-simulator
+```
+
+#### Docker Compose (Multiple Instances)
+For running multiple simulator instances locally:
+```bash
+# Set environment variables
+export EVENT_HUB_CONNECTION_STRING="your-connection-string"
+export EVENT_HUB_NAME="your-eventhub-name"
+
+# Run multiple instances
+docker-compose up
+```
+
+The `docker-compose.yml` includes 3 simulator instances, each generating 10,000 messages/second for a total of 30,000 messages/second.
+
+### 3. Azure Container Instances (ACI) - Recommended for Load Testing
+
+#### Quick Start
 ```powershell
 cd azure-deploy
 .\deploy-aci.ps1
 ```
 
-### Deployment Options
+#### Available Deployment Scripts
 
-#### 1. Automated Deployment (Recommended)
-The `deploy-aci.ps1` script handles the entire deployment process:
+| Script | Purpose | Use Case |
+|--------|---------|----------|
+| `deploy-aci.ps1` | Complete deployment pipeline | First-time deployment |
+| `deploy-existing-image.ps1` | Deploy pre-built image | Using existing container image |
+| `deploy-multiple-wrapper.ps1` | Multiple instance deployment | Distributed load testing |
 
-- Creates Azure Resource Group
-- Sets up Azure Container Registry (ACR)
-- Builds and pushes the container image
-- Deploys to Azure Container Instances
-- Configures environment variables
-
-**Parameters:**
-```powershell
-.\deploy-aci.ps1 -ResourceGroupName "my-rg" -Location "eastus" -AcrName "myacr" -ContainerGroupName "my-simulator" -ContainerImage "simulator:latest"
-```
-
-#### 2. Using Existing Container Image
-If you have a pre-built image, use the existing image deployment:
-
-```powershell
-.\deploy-existing-image.ps1 -ResourceGroupName "my-rg" -ContainerImage "myacr.azurecr.io/simulator:latest"
-```
-
-#### 3. Multiple Instance Deployment
-For distributed load testing, deploy multiple container instances:
-
-```powershell
-.\deploy-multiple-wrapper.ps1 -ResourceGroupName "my-rg" -InstanceCount 5 -MessageRate 50000
-```
-
-### Configuration for ACI
-
-During deployment, you can configure:
-
-- **Event Hub Connection**: Provide connection string and Event Hub name
-- **Message Rate**: Messages per second (default: 1,000,000)
-- **Duration**: Runtime in seconds (default: unlimited)
-- **Container Resources**: CPU and memory allocation
-
-### Monitoring ACI Deployment
-
-**View logs:**
-```bash
-az container logs --resource-group <resource-group> --name <container-group> --follow
-```
-
-**Check status:**
-```bash
-az container show --resource-group <resource-group> --name <container-group> --query "containers[0].instanceView.currentState"
-```
-
-**Monitor performance:**
-```bash
-az monitor metrics list --resource <container-group-resource-id> --metric "CpuUsage,MemoryUsage"
-```
-
-### Cleanup
-
-Remove all deployed resources:
-```bash
-az group delete --name <resource-group> --yes --no-wait
-```
-
-### ACI Benefits
-
-- **Serverless**: No VM management required
-- **Scalable**: Deploy multiple instances for distributed load
+#### ACI Deployment Features
+- **Automated Setup**: Creates Resource Group, ACR, builds image, and deploys
+- **Scalable**: Deploy hundreds of instances for massive throughput
 - **Cost-effective**: Pay only for runtime duration
 - **Fast deployment**: Containers start in seconds
-- **Integrated monitoring**: Built-in Azure Monitor integration
+
+### 4. Azure Container Apps
+Deploy using Azure Container Apps template:
+```bash
+az deployment group create \
+    --resource-group your-rg \
+    --template-file azure-deploy/container-apps-template.json \
+    --parameters eventHubConnectionString="your-connection-string"
+```
+
+## Container Management Tools
+
+For managing large-scale deployments (hundreds of containers), use the PowerShell management scripts:
+
+### Quick Status Check
+```powershell
+cd azure-deploy
+.\quick-aci-check.ps1
+```
+- Fast overview of all container states
+- Bulk operation suggestions
+- Optimized for speed
+
+### Detailed Status Monitoring
+```powershell
+.\check-aci-status.ps1 -StartNumber 1 -EndNumber 100 -Detailed
+```
+Features:
+- Progress tracking with completion percentages
+- Color-coded status display
+- CSV export capability
+- Resource usage information (CPU, memory, restart counts)
+- Filtering options (running only, stopped only)
+
+### Bulk Container Operations
+```powershell
+# Start containers 1-100 in parallel
+.\bulk-aci-manage.ps1 -Action start -StartNumber 1 -EndNumber 100 -Parallel
+
+# Stop containers 200-300
+.\bulk-aci-manage.ps1 -Action stop -StartNumber 200 -EndNumber 300
+
+# Restart specific range
+.\bulk-aci-manage.ps1 -Action restart -StartNumber 50 -EndNumber 60
+
+# View logs from specific container
+.\bulk-aci-manage.ps1 -Action logs -LogContainer "eventhub-simulator-1"
+
+# Delete containers (with safety confirmation)
+.\bulk-aci-manage.ps1 -Action delete -StartNumber 1 -EndNumber 10 -Force
+```
+
+#### Bulk Operations Features
+- **Parallel Execution**: Process multiple containers simultaneously
+- **Safety Confirmations**: Prevent accidental deletions
+- **Progress Tracking**: Real-time success rates and timing
+- **Configurable Concurrency**: Control Azure API load
+
+### Management Workflow Examples
+
+**Daily Operations:**
+```powershell
+# 1. Quick status overview
+.\quick-aci-check.ps1
+
+# 2. Start any stopped containers
+.\bulk-aci-manage.ps1 -Action start -StartNumber 1 -EndNumber 800 -Parallel
+
+# 3. Export detailed status report
+.\check-aci-status.ps1 -Detailed -ExportToCsv -CsvPath "daily-status.csv"
+```
+
+**Maintenance Window:**
+```powershell
+# 1. Stop all containers
+.\bulk-aci-manage.ps1 -Action stop -StartNumber 1 -EndNumber 800 -Parallel
+
+# 2. Restart specific problematic containers
+.\bulk-aci-manage.ps1 -Action restart -StartNumber 100 -EndNumber 110
+
+# 3. Start all containers back up
+.\bulk-aci-manage.ps1 -Action start -StartNumber 1 -EndNumber 800 -Parallel
+```
+
+### Monitoring and Troubleshooting
+
+**View real-time logs:**
+```bash
+az container logs --resource-group high-throughput-streaming-poc --name eventhub-simulator-1 --follow
+```
+
+**Check container performance:**
+```bash
+az container show --resource-group high-throughput-streaming-poc --name eventhub-simulator-1 --query "containers[0].instanceView"
+```
+
+**Monitor Azure metrics:**
+```bash
+az monitor metrics list --resource /subscriptions/your-sub/resourceGroups/your-rg/providers/Microsoft.ContainerInstance/containerGroups/eventhub-simulator-1 --metric "CpuUsage,MemoryUsage"
+```
+
+### Deployment Architecture
+
+For high-throughput scenarios, the typical deployment pattern is:
+- **800+ Container Instances**: Each running independently
+- **Load Balancing**: Distributed across Azure regions
+- **Monitoring**: Centralized logging and metrics collection
+- **Management**: Automated start/stop/restart operations
+
+### Prerequisites for Azure Deployment
+
+1. **Azure CLI**: Install and authenticate
+   ```bash
+   az login
+   ```
+
+2. **PowerShell 5.1+**: For management scripts
+
+3. **Azure Permissions**: Contributor access to target resource group
+
+4. **Event Hub**: Pre-created Azure Event Hub or Fabric Eventstream
 
 ## Performance Notes
 
@@ -236,3 +330,67 @@ az group delete --name <resource-group> --yes --no-wait
 - Batch sends messages for better performance
 - Memory efficient message generation
 - Supports scaling to system resource limits
+
+## Quick Reference
+
+### Common Commands
+
+**Local Testing:**
+```bash
+# Basic load test
+python eventhub_simulator.py --rate 50000 --duration 300
+
+# Custom message size and stocks
+python eventhub_simulator.py --rate 100000 --msg-size 1024 --stocks "AAPL,GOOGL,MSFT"
+```
+
+**Docker:**
+```bash
+# Single instance
+docker run -e EVENT_HUB_CONNECTION_STRING="..." -e EVENT_HUB_NAME="..." eventhub-simulator
+
+# Multiple instances
+docker-compose up
+```
+
+**Azure Deployment:**
+```powershell
+# Quick deploy to Azure
+cd azure-deploy
+.\deploy-aci.ps1
+
+# Check status of 800 containers
+.\quick-aci-check.ps1
+
+# Start containers 1-100
+.\bulk-aci-manage.ps1 -Action start -StartNumber 1 -EndNumber 100 -Parallel
+
+# View logs
+.\bulk-aci-manage.ps1 -Action logs -LogContainer "eventhub-simulator-1"
+```
+
+### Performance Targets
+
+| Deployment | Expected Throughput | Use Case |
+|------------|-------------------|----------|
+| Local (single process) | 50K-100K msg/sec | Development/testing |
+| Docker Compose (3 instances) | 150K-300K msg/sec | Local load testing |
+| Single ACI | 50K-200K msg/sec | Cloud testing |
+| 800 ACI instances | 40M-160M msg/sec | Production load testing |
+
+### Troubleshooting
+
+**Connection Issues:**
+- Verify Event Hub connection string format
+- Check Event Hub name matches configuration
+- Ensure proper Azure permissions
+
+**Performance Issues:**
+- Increase `max_workers` in config
+- Use parallel deployment (`-Parallel` flag)
+- Monitor Azure resource limits
+
+**Container Issues:**
+- Check container logs: `az container logs --name <container> --follow`
+- Verify resource group and container names
+- Ensure Azure CLI authentication: `az login`

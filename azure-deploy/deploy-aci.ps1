@@ -3,10 +3,10 @@
 
 param(
     [string]$ResourceGroupName = "high-throughput-streaming-poc",
-    [string]$Location = "eastus", 
+    [string]$Location = "eastus2", 
     [string]$AcrName = "eventhubsimacr",
-    [string]$ContainerGroupName = "eventhub-simulator-51",
-    [string]$ContainerImage  = "eventhub-simulator-2:latest"
+    [string]$ContainerGroupName = "eventhub-simulator-1001",
+    [string]$ContainerImage  = "eventhub-simulator-dedicated-2:latest"
 
 )
 
@@ -70,6 +70,7 @@ az deployment group create `
     --template-file "$PSScriptRoot/aci-template.json" `
     --parameters `
         containerGroupName=$ContainerGroupName `
+        location=$Location `
         eventHubConnectionString="$eventHubConnectionString" `
         eventHubName="$eventHubName" `
         messageRate=$messageRate `
